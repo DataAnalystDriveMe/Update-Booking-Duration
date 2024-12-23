@@ -1,0 +1,75 @@
+void automation.clean_contract_duration1()
+{
+page_i = 0;
+page_number = 1;
+iterations = 50;
+records_per_page = 200;
+search_criteria = "(Booking_Status:equals:Confirmed) and (Bookoing_Contract_Stage:equals:Finished)";
+iterationString = "".leftPad(iterations).replaceAll(" ",",").toList().subList(0,iterations);
+for each  iter in iterationString
+{
+	page_i = page_i + 1;
+	current_results = zoho.crm.searchRecords("Contracts",search_criteria,page_i,records_per_page);
+	for each  record in current_results
+	{
+		booking_id = record.get("id");
+		crm_product = record.get("CRM_Product");
+		if(!isnull(crm_product))
+		{
+			product_id = crm_product.get("id");
+			time_total = record.get("Time_Total");
+			// Valor original
+			original_time_total = time_total;
+			// Guardar el valor original
+			product = zoho.crm.getRecordById("Products",product_id);
+			product_name = product.get("Product_Name");
+			// Ajuste de time_total según product_name
+			if(product_name.contains("Tibidabo"))
+			{
+				if(time_total > 120 || time_total < 60)
+				{
+					time_total = 90;
+				}
+			}
+			else if(product_name.contains("Montjuic"))
+			{
+				if(time_total > 50 || time_total < 30)
+				{
+					time_total = 40;
+				}
+			}
+			else if(product_name.contains("Barceloneta"))
+			{
+				if(time_total > 30 || time_total < 15)
+				{
+					time_total = 20;
+				}
+			}
+			else if(product_name.contains("Test drive"))
+			{
+				if(time_total > 20)
+				{
+					time_total = 10;
+				}
+			}
+			else if(product_name.contains("Road Routes"))
+			{
+				if(time_total > 360 || time_total < 210)
+				{
+					time_total = 240;
+				}
+			}
+			driving_date_time = record.get("Driving_Date_Time").toTime("yyyy-MM-dd'T'HH:mm:ss");
+			driving_finish_date_time = record.get("Time_Finish").toString("yyyy-MM-dd'T'HH:mm:ss");
+			time_finish_updated = driving_date_time.addMinutes(time_total).toString("yyyy-MM-dd'T'HH:mm:ss");
+			if(driving_finish_date_time != time_finish_updated)
+			{
+				info "Booking ID: " + booking_id + " | Product: " + product_name + " | Original Time_Total: " + original_time_total + " | Updated Time_Total: " + time_total + " | Original Time Finish: " + driving_finish_date_time + " | Updated Time Finish: " + time_finish_updated;
+				update_map = {"Time_Finish":time_finish_updated};
+				update_response = zoho.crm.updateRecord("Contracts",booking_id,update_map);
+				info update_response;
+			}
+		}
+	}
+}
+}
